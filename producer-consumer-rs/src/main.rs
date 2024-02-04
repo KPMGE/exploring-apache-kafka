@@ -1,25 +1,31 @@
 use rdkafka::{
-    producer::{BaseProducer, BaseRecord, Producer},
+    producer::{FutureProducer, FutureRecord},
     ClientConfig,
 };
 use std::time::Duration;
 
-fn main() {
-    let producer: BaseProducer = ClientConfig::new()
+#[tokio::main]
+async fn main() {
+    let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", "host.docker.internal:9094")
         .create()
         .expect("Could not create producer!");
 
     let topic = "test";
     producer
-        .send(BaseRecord::<String, str>::to(topic).payload("Test from rust"))
-        .unwrap_or_else(|e| {
-            eprintln!("ERROR: {:?}", e);
-            std::process::exit(1);
-        });
-
-    producer.flush(Duration::from_secs(1)).unwrap_or_else(|e| {
-        eprintln!("ERROR: {:?}", e);
-        std::process::exit(1);
-    });
+        .send(
+            FutureRecord::<String, str>::to(topic).payload("Test from rust"),
+            Duration::from_secs(2),
+        )
+        .await
+        .map(|(partition, offset)| {
+            println!(
+                "message sent to partition: {} with offset: {}",
+                partition, offset
+            );
+        })
+        .map_err(|(kafka_err, _)| {
+            eprintln!("ERROR: {:?}", kafka_err);
+        })
+        .expect("Could not send the message!");
 }
