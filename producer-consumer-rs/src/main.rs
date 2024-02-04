@@ -1,19 +1,25 @@
-use rdkafka::{producer::{Producer, BaseProducer, BaseRecord}, ClientConfig};
+use rdkafka::{
+    producer::{BaseProducer, BaseRecord, Producer},
+    ClientConfig,
+};
 use std::time::Duration;
 
 fn main() {
     let producer: BaseProducer = ClientConfig::new()
-        .set("bootstrap.servers", "127.0.0.1:9094")
+        .set("bootstrap.servers", "host.docker.internal:9094")
         .create()
         .expect("Could not create producer!");
 
-    let _ = producer.send(
-        BaseRecord::<String, str>::to("test")
-            .payload("Test from rust")
-    ).map_err(|e| {
-        eprintln!("ERROR: could not send the message!");
-        panic!("{:?}", e);
-    });
+    let topic = "test";
+    producer
+        .send(BaseRecord::<String, str>::to(topic).payload("Test from rust"))
+        .unwrap_or_else(|e| {
+            eprintln!("ERROR: {:?}", e);
+            std::process::exit(1);
+        });
 
-    let _ = producer.flush(Duration::from_secs(1));
+    producer.flush(Duration::from_secs(1)).unwrap_or_else(|e| {
+        eprintln!("ERROR: {:?}", e);
+        std::process::exit(1);
+    });
 }

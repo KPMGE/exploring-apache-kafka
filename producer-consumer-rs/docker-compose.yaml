@@ -1,0 +1,11 @@
+version: "3"
+
+
+services:
+  producer_consumer_rs: 
+    build: .
+    container_name: producer_consumer_rs
+    extra_hosts:
+      - "host.docker.internal:172.17.0.1"
+    volumes:
+      - .:/usr/src/producer-consumer-rs
